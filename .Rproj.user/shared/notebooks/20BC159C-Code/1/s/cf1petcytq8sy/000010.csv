@@ -1,0 +1,4 @@
+"0","ggsave(""plot_adherence.png"", plot_adherence, width=5, height=5, dpi=300)
+"
+"2","Error in plot_theme(plot) : object 'plot_adherence' not found
+"

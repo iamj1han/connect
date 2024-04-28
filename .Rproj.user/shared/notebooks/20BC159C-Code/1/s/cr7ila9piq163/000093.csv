@@ -1,0 +1,24 @@
+"0","LOS_by_program <- demo %>% 
+  group_by(Program) %>% 
+  summarize(
+    min_length = min(LOS, na.rm=TRUE),
+    max_length = max(LOS, na.rm=TRUE),
+    median_length = median(LOS, na.rm=TRUE),
+    num_observations = n(na.rm=TRUE)
+  )
+"
+"1","[1m[33mError[39m in `summarize()`:[22m
+[38;5;232m[36mℹ[38;5;232m In argument: `num_observations = n(na.rm = TRUE)`.
+[36mℹ[38;5;232m In group 1: `Program = CONNECT`.[39m
+[1mCaused by error in `n()`:[22m
+[33m![39m unused argument (na.rm = TRUE)
+Backtrace:
+[90m  1. [39mdemo %>% group_by(Program) %>% ...
+[90m  3. [39m[1m[94mdplyr:::summarise.grouped_df([39m[22m...[1m[94m)[39m[22m
+[90m  4. [39mdplyr:::summarise_cols(.data, dplyr_quosures(...), by, ""summarise"")
+[90m  6. [39mdplyr:::map(quosures, summarise_eval_one, mask = mask)
+[90m  7. [39m[1mbase[22m::lapply(.x, .f, ...)
+[90m  8. [39m[1mdplyr[22m (local) FUN(X[[i]], ...)
+[90m  9. [39mmask$eval_all_summarise(quo)
+[90m 10. [39m[1mdplyr[22m (local) eval()
+"

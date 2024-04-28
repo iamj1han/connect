@@ -1,0 +1,24 @@
+{
+    "id": "FC496149",
+    "path": "~/Projects/CONNECT/CONNECT_appointment_adherence.csv",
+    "project_path": "CONNECT_appointment_adherence.csv",
+    "type": "text",
+    "hash": "1820987548",
+    "contents": "",
+    "dirty": false,
+    "created": 1713213031080.0,
+    "source_on_save": false,
+    "relative_order": 7,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1713212956,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1713212956,
+    "read_only": false,
+    "read_only_alternatives": []
+}

@@ -1,0 +1,41 @@
+"0","plot_psyckes <- ggplot(crisis_events_summary, aes(x=group, y=mean, fill=group))+
+  geom_bar(width=0.3, stat=""identity"", position=""dodge"")+
+  geom_errorbar(aes(ymin = mean - se,
+                    ymax = mean + se), width = 0.2)+
+  geom_line(aes(group = 1), color = ""black"", size = 0.5, linetype=""dashed"")+
+  geom_text(aes(label = round(mean, 2)), 
+            vjust = -1, hjust = -1, size = 4)
+  labs(x = ""Comparison of Billing Events for Hospital/ER/Crisis Care (n=11)"",
+       y = ""Annual average"", fill=""Period"")
+"
+"1","$x
+"
+"1","[1]"
+"1"," ""Comparison of Billing Events for Hospital/ER/Crisis Care (n=11)"""
+"1","
+"
+"1","
+"
+"1","$y
+"
+"1","[1]"
+"1"," ""Annual average"""
+"1","
+"
+"1","
+"
+"1","$fill
+"
+"1","[1]"
+"1"," ""Period"""
+"1","
+"
+"1","
+"
+"1","attr(,""class"")"
+"1","
+"
+"1","[1]"
+"1"," ""labels"""
+"1","
+"

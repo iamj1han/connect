@@ -1,0 +1,413 @@
+```{r}
+# title: "CONNECT pilot analysis"
+# author: "Jihan Ryu"
+# date: "2024-04-28"
+# output: html_document
+
+# 1. Load Packages
+
+install.packages(c("readxl", "ggplot2", "dplyr", "tidyr", "statsr"))
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(statsr)
+
+# 2. Load the Demographic Data Frame
+
+demo <- read_excel("./CONNECT_demographic_041724.xlsx")
+factors<- c("MRN","Diagnosis","Program","Race","Gender","Insurance","Language","Referral")
+numerics<- c("LOS","Age")
+demo[,factors]<-lapply(demo[,factors], as.factor)
+demo[,numerics]<-lapply(demo[,numerics], as.numeric)
+
+summary(demo) # sanity check - median age should be 53 out of 64 people
+
+# 3. Visualize Distribution of Demographics/Treatment Summary
+
+## Diagnosis
+
+plot_dx <- ggplot(demo, aes(x=Diagnosis, fill=Diagnosis))+
+  geom_bar(width=0.3)+
+  labs(x="Primary Diagnosis",y="Count")+
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("Psychotic","Depressive","Bipolar","Anxiety/Trauma","Personality","Adjustment/Others"))+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+## Race/ethnicity
+
+plot_race <- ggplot(demo, aes(x=Race, fill=Race))+
+  geom_bar(width=0.3)+
+  labs(x="Race/ethnicity",y="Count")+
+  theme(legend.position = "none", axis.text.x = element_text(angle=15, hjust=1))+
+  scale_x_discrete(labels=c("Asian","Hispanic (White or non-white)","Non-hispanic White","Black","Other"))+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+## Age
+
+plot_age <- ggplot(demo, aes(x=Age))+
+  geom_histogram(fill = "skyblue")+
+  geom_vline(aes(xintercept = median(Age)), color="blue", linetype ="dashed")+
+  geom_text(aes(x=median(demo$Age), y=0.01, label=paste("Median Age:", median(demo$Age)), size=5, vjust=-1))+
+  labs(x="Age",y="Count")+
+  theme(legend.position = "none")
+
+## Gender
+
+plot_gender <- ggplot(demo, aes(x=Gender, fill=Gender))+
+  geom_bar(width=0.3)+
+  labs(x="Gender",y="Count")+
+  theme(legend.position = "none")+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+## Language
+
+plot_language <- ggplot(demo, aes(x=Language, fill=Language))+
+  geom_bar(width=0.3)+
+  labs(x="Primary Language",y="Count")+
+  theme(legend.position = "none")+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+## Insurance
+
+plot_insurance <- ggplot(demo, aes(x=Insurance, fill=Insurance))+
+  geom_bar(width=0.3)+
+  labs(x="Primary Insurance",y="Count")+
+  theme(legend.position = "none")+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+## Referral (CONNECT primary program only)
+
+plot_connect_referral <- ggplot(demo[demo$Program=="CONNECT",], aes(x=Referral, fill=Referral))+
+  geom_bar(width=0.3)+
+  labs(x="Referral Source",y="Count")+
+  theme(legend.position = "none", axis.text.x = element_text(angle=15, hjust=1))+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  ) # non-CONNECT primary program were all HMH internal referral only for case management assistance
+
+
+## Length of Stay (LOS) categorized by primary program (create medians into new data frame and create bar charts)
+
+LOS_by_program <- demo %>% 
+  group_by(Program) %>% 
+  summarize(
+    min_length = min(LOS, na.rm=TRUE),
+    max_length = max(LOS, na.rm=TRUE),
+    median_length = median(LOS, na.rm=TRUE),
+    num_observations = sum(!is.na(LOS))
+  )
+
+LOS_by_program_long <- LOS_by_program %>% 
+  pivot_longer(cols=c(min_length, max_length, median_length),
+               names_to = "Statistic",
+               values_to = "Length")
+
+plot_los <- ggplot(LOS_by_program_long, aes(x=Length, y=Program, color=Statistic))+
+  geom_point(size=3, shape=16)+
+  geom_path(aes(group=Program), color="black")+
+  scale_color_manual(values=c("red","blue","green"))+
+  geom_text(data=LOS_by_program_long[LOS_by_program_long$Statistic=="median_length",],
+            aes(label=Length),
+            color="black",
+            vjust=-1.5,
+            size=3)+
+  scale_y_discrete(labels = c("Pros Client" = "Personalized Recovery Oriented Services, n=2",
+                   "Outpatient" = "Article 31 Adult Outpatient Program, n=20",
+                   "CONNECT" = "CONNECT, n=13"))+
+  theme(axis.text.y = element_text(angle=15, hjust=1))+
+  labs(x="Length of Engagement with CONNECT (in months; graduates only)", y="Primary Program")
+
+# 4. Print and Save Plots
+
+file_path <-"~/Projects/CONNECT"
+
+ggsave("plot_dx.png", plot_dx, width=7, height=4, dpi=300)
+ggsave("plot_race.png", plot_race, width=7, height=4, dpi=300)
+ggsave("plot_age.png", plot_age, width=7, height=4, dpi=300)
+ggsave("plot_gender.png", plot_gender, width=7, height=4, dpi=300)
+ggsave("plot_language.png", plot_language, width=7, height=4, dpi=300)
+
+ggsave("plot_insurance.png", plot_insurance, width=7, height=4, dpi=300)
+ggsave("plot_connect_referral.png", plot_connect_referral, width=7, height=4, dpi=300)
+ggsave("plot_los.png", plot_los, width=7, height=4, dpi=300)
+```
+
+```{r}
+# 5. Load the Adherence Data Frame (CONNECT as primary program patients only)
+
+adherence <- read.csv("./CONNECT_appointment_adherence.csv")
+names(adherence) # call the column names
+
+## Select the columns to drop % values 
+
+selected_columns <- c("X2022_Q3","X2022_Q4","X2023_Q1","X2023_Q2","X2023_Q3","X2023_Q4","X2024_Q1")
+
+## Change into numeric values using lapply function, and categories of attendance as factor
+
+remove_percent <- function(x) as.numeric(gsub("%", "", x))
+adherence[selected_columns] <- lapply(adherence[selected_columns], remove_percent)
+adherence$X <- as.factor(adherence$X)
+
+# 6. Transform data frame and Visualize Attendance Data Across Quarters
+
+adherence_long <- adherence %>% 
+  pivot_longer(cols=selected_columns,
+               names_to = "Quarter",
+               values_to = "Rates")
+
+plot_adherence <- ggplot(adherence_long, aes(x=Quarter, y=Rates, color=X, group=X))+
+  geom_line(size=1.5)+
+  scale_x_discrete(labels = c("X2022_Q3" = "2022 Q3",
+                              "X2022_Q4" = "2022 Q4",
+                              "X2023_Q1" = "2023 Q1",
+                              "X2023_Q2" = "2023 Q2",
+                              "X2023_Q3" = "2023 Q3",
+                              "X2023_Q4" = "2023 Q4",
+                              "X2024_Q1" = "2024 Q1"))+
+  theme(axis.text.x = element_text(angle=15, hjust=1))+
+  geom_text(data=adherence_long[adherence_long$Quarter=="X2024_Q1",],
+            aes(label=Rates), vjust=1.75)+
+  labs(x="Quarter", y="Rates (%)", color="Legend") #limitations include that observation of data points changed varied across time - just summary statistic as aggregate
+
+# 7. Save Adherence Figure 
+
+ggsave("plot_adherence.png", plot_adherence, width=5, height=4, dpi=300)
+
+```
+
+```{r}
+# 8. Load the Appointment Sheet Data Frame
+
+appointment <- read.csv("./CONNECT_appointment_sheet_041524.csv")
+names(appointment) 
+
+dim(demo[demo$Program=="CONNECT",]) # 36 unique members
+
+factors<- c("MRN","Visit.Type")
+appointment[,factors]<-lapply(appointment[,factors], as.factor)
+dim(appointment) #1634 x 26 size, but includes blank rows
+invalid_mrn<- factor(c("105710","106038","104825","106320","106175",NA))
+appointment <- subset(appointment, !(MRN %in% invalid_mrn)) #this is where appointment get replaced by itself - double check if appointment$provider_name does not include "" and "ZHANG,ZHE WEI"
+
+dim(appointment) #779 visits by
+str(appointment$MRN) #33 unique MRNs - all full CONNECT cases only
+
+summary(appointment$Visit.Type)
+valid_visit_type <- factor(c("Offsite","Onsite","Telehealth","Walk-In"))
+
+#9. Trim & Visualize Visit Type on bar graph and Save (out of 386)
+
+appointment_trim <- subset(appointment, (Visit.Type %in% valid_visit_type)) #select only the rows with visit.type information available - total 779 visits -> 386 visits, i.e. 50% visits deleted (limitation)
+
+summary(appointment_trim$Visit.Type)
+appointment_trim$Visit.Type <- droplevels(appointment_trim$Visit.Type, exclude = c("", "Walk-In")) 
+
+plot_visit_type <- ggplot(appointment_trim, aes(x=Visit.Type, fill=Visit.Type))+
+  geom_bar(width=0.3)+
+  labs(x="Location of Service",y="Count")+
+  theme(legend.position = "none")+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+ggsave("plot_visit_type.png", plot_visit_type, width=5, height=4, dpi=300)
+
+#10. Mutate level provider_name (character) into service_type (factor)
+
+str(appointment$provider_name) #check there is white trailing space after each provider name
+
+appointment_mutate <- appointment %>% 
+  mutate(service_type = factor(case_when(
+    provider_name == "BAUM,DANIELLE "~ "Health_Assessment",
+    provider_name %in% c("RYU,JIHAN ","ZHOU,YIHOU (MIKE) ","XIAO,CHARLIE ")  ~ "Med_Management",
+    provider_name %in% c("CHEN,TSE-CHIEN(RICH) " ,"HSU,JACKSON ","KUANG,FANNY ","MAO,JIAYUE ","SUN,QIN (SUNNIE) ","TSAO,ALICE ","ZHOU,VANESSA ") ~ "Therapy_Appointment"
+  )))
+
+#11. Visualize service_type (out of 779 visits)
+
+plot_service_type <- ggplot(appointment_mutate, aes(x=service_type, fill=service_type))+
+  geom_bar(width=0.3)+
+  labs(x="Type of Service (n=779 visits)",y="Count")+
+  theme(legend.position = "none")+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+ggsave("plot_service_type.png", plot_service_type, width=5, height=4, dpi=300)
+```
+
+```{r}
+# 12. Load the contact data frame
+
+contact <- read_excel("./CONNECT_contact_notes_041724.xlsx")
+names(contact)
+
+## Place variables in the right format
+
+factors2<- c("MRN","benefits","food_security","health_and_wellness","housing","legal_assistance","transportation","outreach","support_group","other_service")
+numerics2<- c("duration")
+
+contact[,factors2]<-lapply(contact[,factors2], as.factor)
+contact[,numerics2]<-lapply(contact[,numerics2], as.numeric)
+
+dim(contact) #2668 contact notes * 19 size written for
+contact$MRN #85 levels - 85 unique clients 
+
+## FIRST delete the rows that don't belong (never admitted) ##
+
+invalid_mrn2<- factor(c("106174","100953","105802","105721","104121","105907", "106038","106182","106283","106130","106078","106150","106166","106221","103672","106320","105710")) 
+contact <- subset(contact, !(MRN %in% invalid_mrn2)) 
+contact$MRN <- droplevels(contact$MRN, exclude = c("106174","100953","105802","105721","104121","105907", "106038","106182","106283","106130","106078","106150","106166","106221","103672","106320","105710")) #this is where appointment get replaced by itself - double check if dim(contact) shows 2591 notes for 68 unique clients
+
+# 13. Who wrote these contacts?
+summary(as.factor(contact$prov_name)) #check there is white trailing space after comma each provider's last name for 15 providers to date when using as character variable
+
+contact_mutate <- contact %>% 
+  mutate(provider_type = factor(case_when(
+    prov_name == "BAUM, DANIELLE"~ "RN",
+    prov_name %in% c("RYU, JIHAN","Dr. ZHOU, YIHOU (MIKE)","XIAO, CHARLIE")  ~ "Psychiatric Provider",
+    prov_name %in% c("CHEN, TSE-CHIEN(RICH)","KUANG, FANNY","MAO, JIAYUE","TSAO, ALICE","ZHANG, ZHE WEI") ~ "Therapy_Provider",
+    prov_name %in% c("HUANG, JEFF (ZE YUAN)","LI, ESTHER","MARRARA, JAMIE") ~ "Case_Management_Provider",
+    prov_name %in% c("KIM, PAIGE(HA KYOUNG)","NG, JANICE","WONG, OLIVIA") ~ "Administrative_Staff",
+  )))
+
+summary(contact_mutate$provider_type) 
+
+## Visualize provider_type (out of 2591 notes)
+
+plot_provider_type <- ggplot(contact_mutate, aes(x=provider_type, fill=provider_type))+
+  geom_bar(width=0.3)+
+  labs(x="Type of Provider Who Wrote Contact Notes (n=2591)",y="Count")+
+  theme(legend.position = "none", axis.text.x = element_text(angle=15, hjust=1))+
+  geom_text(
+    aes(label = paste0(round((after_stat(count))/sum(after_stat(count))*100, 1), "%")),
+    stat="count",
+    vjust=-0.25
+  )
+
+ggsave("plot_provider_type.png", plot_provider_type, width=5, height=4, dpi=300)
+
+# 14. What were these contacts about?
+
+contact_what <- contact_mutate[,factors2]
+
+## Calculate the proportion of TRUE counts in each column (across case management services content columns)
+
+## drop MRN column and iterate to find the sum observations of True values only in each contact note
+
+count_contact <- data.frame()
+
+for (col in factors2[-1]) {
+  # Check if the column is a factor variable
+    col_count <- sum(contact_mutate[[col]] == "True", na.rm=TRUE)
+    # Add the count as a column to the data frame
+    count_contact <- rbind(count_contact, col_count)
+}
+
+colnames(count_contact)[1] <- "Number_of_True"
+count_contact[,"Case_Management_Need"] <- as.factor(factors2[-1])
+count_contact$Percentage <- count_contact$Number_of_True / sum(count_contact$Number_of_True) * 100
+
+## Visualize counts across case management needs
+
+plot_contact_notes <- ggplot(count_contact, aes(x=Case_Management_Need, y=Number_of_True, color=, fill=Case_Management_Need)) +
+  geom_bar(stat="identity", width=0.3) +
+  labs(x = "Case_Management_Need",
+       y = "Counts Marked on Contact Notes \n (n=2591)") +
+  theme(legend.position = "none")+
+  geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+            vjust = -0.25, size = 3) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 15. How long was each contact?
+
+plot_contact_duration <- ggplot(contact_mutate, aes(x=duration))+
+  geom_histogram(fill = "grey")+
+  geom_vline(aes(xintercept = median(duration, na.rm=TRUE)), color="black", linetype ="dashed")+
+  geom_text(x=75, y=750, 
+            label=paste("Median Duration of Contact:", median(contact_mutate$duration, na.rm=TRUE), "min"), size=4, vjust=-1)+
+  labs(x="Duration of Contact in Between Sessions (in minutes)",y="Count")+
+  theme(legend.position = "none")
+
+# 16. Save plots and wrap-up
+
+ggsave("plot_contact_notes.png", plot_contact_notes, width=5, height=4, dpi=300)
+ggsave("plot_contact_duration.png", plot_contact_duration, width=5, height=4, dpi=300)
+```
+
+```{r}
+# 17. Load up psyckes cris events dataframe
+
+crisis_events <- read_excel("./PSYCKES_Crisis_Events.xlsx")
+names(crisis_events)
+
+## If value for Avg_pre_CONNECT or Avg_post-_CONNECT is zero, add 0.01 to not lose degrees of freedom when doing paired t.test later
+
+crisis_events$Avg_pre_CONNECT_edit <- if_else(
+  crisis_events$Avg_pre_CONNECT == 0, 0.01, crisis_events$Avg_pre_CONNECT)
+crisis_events$Avg_post_CONNECT_edit <- if_else(
+  crisis_events$Avg_post_CONNECT == 0, 0.01, crisis_events$Avg_post_CONNECT)
+
+# 18. Run paired t test using statsr package
+
+t.test(crisis_events$Avg_pre_CONNECT_edit, 
+       crisis_events$Avg_post_CONNECT_edit, paired = TRUE) #significant
+
+# 19. Summarize stats and visualize the graphs
+
+mean_pre_CONNECT <- mean(crisis_events$Avg_pre_CONNECT_edit)
+mean_post_CONNECT <- mean(crisis_events$Avg_post_CONNECT_edit)
+se_pre_CONNECT <- sd(crisis_events$Avg_pre_CONNECT_edit) / sqrt(length(crisis_events$Avg_pre_CONNECT_edit))
+se_post_CONNECT <- sd(crisis_events$Avg_post_CONNECT_edit) / sqrt(length(crisis_events$Avg_post_CONNECT_edit))
+
+## Create a dataframe for plotting statistic
+crisis_events_summary <- data.frame(
+  group = factor(c("pre_CONNECT", "post_CONNECT"), levels=c("pre_CONNECT", "post_CONNECT")), #specify levels here to have pre_connect show up to the left of post_connect
+  mean = c(mean_pre_CONNECT, mean_post_CONNECT),
+  se = c(se_pre_CONNECT, se_post_CONNECT)
+)
+
+## Use ggplot2 to visualize
+
+plot_psyckes <- ggplot(crisis_events_summary, aes(x=group, y=mean, fill=group))+
+  geom_bar(width=0.3, stat="identity", position="dodge")+
+  geom_errorbar(aes(ymin = mean - se,
+                    ymax = mean + se), width = 0.2)+
+  geom_line(aes(group = 1), color = "black", size = 0.5, linetype="dashed")+
+  geom_text(aes(label = round(mean, 2)), 
+            vjust = -1, hjust = -1, size = 4)+
+  labs(x = "Billing Events for Hospital/ER/Crisis Care (n=11)",
+       y = "Annual average", fill="Period")
+
+ggsave("plot_psyckes.png", plot_psyckes, width=5, height=4, dpi=300)
+
+# END.
+```
+
